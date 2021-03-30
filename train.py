@@ -7,7 +7,8 @@ import time
 import datetime
 import torch.optim as optim
 import torch
-
+import pickle 
+from torchvision import transforms
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser()
@@ -27,11 +28,14 @@ parser.add_argument('--num_workers', default=4, type=int, help='number of worker
 parser.add_argument('--num_epochs', default=1000, type=int, help='number of workers for loading data')
 
 opt = parser.parse_args()
-resolution = (128, 128)
+resolution = (64, 64)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-train_set = CLEVR('train')
+with open('/home/nikepupu/create_dataset/dataset.pickle', 'rb') as handle:
+        hash_table = pickle.load(handle)
+        data = list(hash_table.values())
+        data = [transforms.ToTensor()(item) for item in data ]
+train_set = data
 model = SlotAttentionAutoEncoder(resolution, opt.num_slots, opt.num_iterations, opt.hid_dim).to(device)
 # model.load_state_dict(torch.load('./tmp/model6.ckpt')['model_state_dict'])
 
@@ -64,7 +68,7 @@ for epoch in range(opt.num_epochs):
 
         optimizer.param_groups[0]['lr'] = learning_rate
         
-        image = sample['image'].to(device)
+        image = sample.to(device)
         recon_combined, recons, masks, slots = model(image)
         loss = criterion(recon_combined, image)
         total_loss += loss.item()
